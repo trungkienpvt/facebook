@@ -1,57 +1,31 @@
 <?php
-define('FB_APP_ID', '451633734906371');
-define('FB_APP_SECRET', '7db75384d226678c04f63dd49cd33882');
-define('SITE_BASE_URL', 'http://localhost/facebook/index.php/');
-define('SITE_CANCEL_URL', 'http://localhost/facebook/index.php/');
-define('SITE_NEXT_URL', 'http://localhost/facebook/index.php/');
-define("THEME",'twitter-bootstrap');
-define("LIMIT_PAGE",20);
-
-session_start();
-require 'facebook-php-sdk/facebook.php';
-// Create our Application instance (replace this with your appId and secret).
-$facebook = new Facebook(array(
-            'appId' => FB_APP_ID,
-            'secret' => FB_APP_SECRET,
-        ));
-// Get User ID
-$user = $facebook->getUser();
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+require_once 'facebook_utility.php';
+$facebook = new FacebookUtility();
+$facebook->logout();
+$user = $facebook->get_user();
 if ($user) {
-    $logoutUrl = $facebook->getLogoutUrl(array("next"=>SITE_BASE_URL));
-} else {
-    $loginUrl = $facebook->getLoginUrl(array(
-        'scope' => 'email,user_birthday,status_update,publish_stream,user_photos',
-        'next' => SITE_NEXT_URL,
-        'cancel_url' => SITE_CANCEL_URL,
-        'display'=> 'popup'
-       ));
-}
-
-if ($user) {
+    $logoutUrl = $facebook->get_logout_url();
     try {
         // Proceed knowing you have a logged in user who's authenticated.
-        $user_profile = $facebook->api('/me');
-        $requestFriend = $facebook->api('/me/friends');
-        $friends= $requestFriend['data'];
-        $countFriend = count($friends);
+        
+        $user_profile = $facebook->get_user_profile();
+        $user_album = $facebook->get_albums();
+        $friends = $facebook->get_friends('fields=about,bio,age_range,first_name,gender,address,email,location,link,languages,username,last_name,timezone,updated_time,name');
+        if( !empty($user_album) ) {
+          foreach( $user_album['data'] as $item ) {
+          $respon = $facebook->get_album_by_id($item['id']);
+          $picture_of_album[$item['name']] = $respon['data'];
+          }
+        }
+        $countFriend = count($friends['data']);
         if(isset($_REQUEST['page']))
             $page = $_REQUEST['page'];
         else $page = 1;
         $limit = LIMIT_PAGE;
         $totalPage = ceil($countFriend/$limit);
-        $friendsResult = array_slice($friends, ($page-1)*$limit, $limit);
-//        $pageId = 'BaoBongDa';
-//	$pageinfo = $facebook->api($pageId);
-//	$pageLike = $pageinfo['likes'];
-//        $userProfile = $this->facebook->api('/me');
-//                print("<pre>");
-//    print_r($user_profile);exit;
-//        var_dump($user_profile);
-
-
-//        print("<pre>");
-//    print_r($friends);exit;
-//        var_dump($user_profile);
+        $friendsResult = array_slice($friends['data'], ($page-1)*$limit, $limit);
     } catch (FacebookApiException $e) {
 
                     $params = array(
@@ -60,51 +34,14 @@ if ($user) {
                     $loginURL = $facebook->getLoginUrl($params);
                     die('<script>window.top.location.href="' . $loginURL . '";</script>');
     }
+}else {
+  $loginUrl = $facebook->get_login_url();
 }
-try{
-//    var_dump($_POST);exit;
-
-        if(isset($_POST['message'])){
-            $message = $_POST['message'];
-            $description = $_POST['description'];
-            $name = $_POST['name'];
-            $attachment = array(
-                'access_token' => $facebook->getAccessToken(),
-                'name' => $name,
-                'description' => $description,
-                'message' => $message,
-//                'picture' => '',
-                'link' => SITE_BASE_URL
-            );
-            $result = $facebook->api('/' . $user_profile['id'] . '/feed', 'POST', $attachment);
-            if($result){
-                echo json_encode(array('status'=>1));
-
-            }else
-                echo json_encode(array('status'=>0));
-            exit;
-        }
-
-}  catch (FacebookApiException $e){
-
-    var_dump($e);
-
+if(isset($_POST) && !empty($_POST)) {
+  $facebook->post_comment($_POST);
 }
-$urlPageWantToCountLike = 'https://www.facebook.com/onlineshoptk';
-try {
-        $countLike = $facebook->api(array(
-            'method' => 'fql.query',
-            'query' => '
-                SELECT share_count, like_count, comment_count, total_count
-                FROM link_stat
-                WHERE url="'.$urlPageWantToCountLike.'"
-            ',
-            )
-        );
-//        var_dump('<pre>', $countLike);
-    } catch(FacebookApiException $e) {
-        die('<script>window.top.location.href="' . $loginUrl . '";</script>');
-    }
+$page_link = 'https://www.facebook.com/onlineshoptk';
+$count_liked_of_page = $facebook->get_liked_of_page($page_link);
 
 ?>
 <!DOCTYPE html>
@@ -212,7 +149,7 @@ try {
             <button type="button" id="sendmessage" name="sendmessage" class="btn">Send Message</button>
             </fieldset>
         </form>
-        <h2>Like number of page :<span class="badge badge-important"><?php print $countLike[0]['like_count'] ?></span></h2>
+        <h2>Like number of page :<span class="badge badge-important"><?php print $count_liked_of_page[0]['like_count'] ?></span></h2>
       </div>
       <!-- Example row of columns -->
       <hr>
