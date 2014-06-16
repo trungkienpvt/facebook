@@ -26,7 +26,9 @@ class FacebookUtility {
     define("THEME",'twitter-bootstrap');
     define("LIMIT_PAGE",20);
     session_start();
+    
     require 'facebook-php-sdk/facebook.php';
+    
     $this->facebook = new Facebook(array(
             'appId' => FB_APP_ID,
             'secret' => FB_APP_SECRET,
@@ -100,13 +102,13 @@ class FacebookUtility {
     }
   }
   public function get_friend_by_id( $id, $param ) {
-//    $results = $this->facebook->api('/?fields=about,bio,age_range,first_name,gender,address,email,location,link,languages,username,last_name,timezone,updated_time&ids='.$id);
     $results = $this->facebook->api('/?fields=' . $param . '&ids='.$id);
     return $results;
   }
   public function logout() {
     if(isset($_REQUEST['logout']) && $_REQUEST['logout'] == true) {
       $this->facebook->destroySession();
+      header('Location:index.php');
     }
 
   }
@@ -163,6 +165,20 @@ class FacebookUtility {
 
 }
   }
+ public function get_comment_of_post( $post_id = 0 ) {
+    try{
+//        $post_id = '570015009781593';
+        if(!empty($post_id)){
+            $post_comments = $this->facebook->api('/' . $post_id . '/comments');
+            return $post_comments;
+        }
+
+}  catch (FacebookApiException $e){
+
+    var_dump($e);
+
+}
+  } 
   
   public function get_pageinfo_by_id( $id ) {
     $page_info = $this->facebook->api($id);

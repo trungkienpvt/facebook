@@ -5,11 +5,29 @@ require_once 'facebook_utility.php';
 $facebook = new FacebookUtility();
 $facebook->logout();
 $user = $facebook->get_user();
+if(isset($_REQUEST['action']))
+  $action = $_REQUEST['action'];
+else
+  $action = '';
+switch($action) {
+  case 'get_user':
+    if(isset($_REQUEST['id']))
+      $id = $_REQUEST['id'];
+    else 
+      $id = 0;
+    $param = 'about,bio,age_range,first_name,gender,address,email,location,link,languages,username,last_name,timezone,updated_time,name';
+    $user_info = $facebook->get_friend_by_id($id, $param);
+    
+    echo '<pre>';
+    print_R($user_info);
+    echo '</pre>';
+    break;
+  
+}
 if ($user) {
     $logoutUrl = $facebook->get_logout_url();
     try {
         // Proceed knowing you have a logged in user who's authenticated.
-        
         $user_profile = $facebook->get_user_profile();
         $user_album = $facebook->get_albums();
         $friends = $facebook->get_friends('fields=about,bio,age_range,first_name,gender,address,email,location,link,languages,username,last_name,timezone,updated_time,name');
@@ -96,18 +114,16 @@ $count_liked_of_page = $facebook->get_liked_of_page($page_link);
         <button class="btn btn-large btn-primary" type="button" onclick="location.href='<?php print $logoutUrl?>';">Logout</button>
         <h2>Friend List</h2>
         <?php $data = $friendsResult?>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>avatar</th><th>Name</th>
-                    </tr>
-            </thead>
-            <?php foreach($data as $row):?>
-        <tr><td><img src="https://graph.facebook.com/<?php echo $row['id'] ?>/picture"/></td><td><?php print ($row['name'])?></td>
+        
+        <div class="dropdown">
+  <a data-toggle="dropdown" href="#">Chose a friend</a>
+  <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+    <?php foreach($data as $row):?>
+    <li><a href="index.php?action=get_user&id=<?php echo $row['id']?>"><img src="https://graph.facebook.com/<?php echo $row['id'] ?>/picture"/></td><td><?php print ($row['name'])?></a></li>
+      <?php endforeach;?>
+  </ul>
+</div>
 
-            </tr>
-        <?php endforeach;?>
-        </table>
             <div class="pagination">
     <ul>
         <?php
@@ -152,6 +168,7 @@ $count_liked_of_page = $facebook->get_liked_of_page($page_link);
         <h2>Like number of page :<span class="badge badge-important"><?php print $count_liked_of_page[0]['like_count'] ?></span></h2>
       </div>
       <!-- Example row of columns -->
+
       <hr>
       <footer>
         <p>&copy; Company 2012</p>
@@ -173,6 +190,8 @@ $count_liked_of_page = $facebook->get_liked_of_page($page_link);
     <script src="<?php print THEME?>/assets/js/bootstrap-collapse.js"></script>
     <script src="<?php print THEME?>/assets/js/bootstrap-carousel.js"></script>
     <script src="<?php print THEME?>/assets/js/bootstrap-typeahead.js"></script>
+    <script src="<?php print THEME?>/assets/js/util.js"></script>
+    <script src="<?php print THEME?>/assets/js/start.js"></script>
     <script type="text/javascript" language="javascript">
     $(document).ready(function(){
         $('#sendmessage').click(function(){
@@ -185,5 +204,6 @@ $count_liked_of_page = $facebook->get_liked_of_page($page_link);
         });
         });
     </script>
+    <div id="fb-root"></div>
   </body>
 </html>
